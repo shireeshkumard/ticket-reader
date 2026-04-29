@@ -1,0 +1,6 @@
+Ticket number,Ticket description, Status,Current Owner,Issue type
+TSR-001,Login fails on mobile,Open,PACS team,Blocker
+,,,,
+TSR-002,App crashes on startup,Resolved,Product,Critical
+Ticket number,Ticket description, Status,Current Owner,Issue type
+TSR-003,UI rendering issue,In Progress,Bank Team,Critical

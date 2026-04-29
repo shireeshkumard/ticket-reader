@@ -1,0 +1,15 @@
+Ticket number,Ticket description, Status,Current Owner,Issue type
+TSR-1176901,Questionnaire navigatation forced logout issue,PACS Provided the workaround is not working.,PACS team,Blocker
+TSR-1176124,Android Crash issues when click the datePicker and drop down the device notification,Waiting for the fix from Product team,Product,Blocker
+TSR-3189579,"when launch the android app , the app crashed and can not use newmb app",Waiting for the PACS team to analyze further,PACS team,Blocker
+TSR-3185287,Reducing the appclip size,Product team will provide the fix on 18th May,Product,Blocker
+TSR-1169166,The focus jumps erratically when typing on the keyboard.,PACS Provided the workaround is not working.,PACS team,Critical
+TSR-1169160,Setting focus via code does not work.,PACS Provided the workaround is not working.,PACS team,Critical
+TSR-1165600,"After enabling accessibility, executing code in the timer causes the focus to wander.","Provided the workaround,waiting for Bank team to check with it",Bank Team,Critical
+TSR-1179501,Ibrain Investment Advisory Agreement result page show error,requested Bank team to compare the mapping parameter with TWID,Bank Team,Critical
+,,,,
+,,,,
+Ticket number,Ticket description, Status,Current Owner,Issue type
+TSR-1172872,Fabric image Vulnerabilities,Waiting for the Product updates,Product,Critical
+,Fabric with Java21 support,"Customer APIs wont be publicly accessible and wont provide the access too to test the SInopac functionalities from Temenos environment.
+if the QA Images shouldnot be shared with Customer, Could you please suggest can we request customer to download the R25 Fabric temenos basecamp (if certified by DIgital team). ",Product,Critical
