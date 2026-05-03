@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>METAR Reader</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+      min-height: 100vh;
+      color: #e8f4fd;
+      padding: 2rem 1rem;
+    }
+
+    .container {
+      max-width: 720px;
+      margin: 0 auto;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 2.5rem;
+    }
+    header h1 {
+      font-size: 2.2rem;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+    }
+    header p {
+      color: #a8c8e8;
+      margin-top: 0.4rem;
+      font-size: 1rem;
+    }
+
+    .search-box {
+      display: flex;
+      gap: 0.6rem;
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 14px;
+      padding: 1rem 1.2rem;
+      margin-bottom: 1.8rem;
+    }
+    .search-box input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: #fff;
+      font-size: 1.1rem;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+    .search-box input::placeholder { color: #6a9cbf; text-transform: none; letter-spacing: 0; }
+    .search-box button {
+      background: #3b9eda;
+      border: none;
+      border-radius: 9px;
+      color: #fff;
+      cursor: pointer;
+      font-size: 0.95rem;
+      font-weight: 600;
+      padding: 0.55rem 1.4rem;
+      transition: background 0.2s;
+      white-space: nowrap;
+    }
+    .search-box button:hover { background: #2b85c4; }
+    .search-box button:disabled { background: #2a5f80; cursor: default; }
+
+    .examples {
+      text-align: center;
+      margin-top: -0.8rem;
+      margin-bottom: 1.5rem;
+      font-size: 0.85rem;
+      color: #7aabb8;
+    }
+    .examples span { cursor: pointer; color: #5dbcd6; border-bottom: 1px dashed #5dbcd6; margin: 0 0.4rem; }
+    .examples span:hover { color: #8fd8ed; }
+
+    /* Result cards */
+    #result { display: none; }
+
+    .summary-card {
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 16px;
+      padding: 1.5rem 1.6rem;
+      margin-bottom: 1.2rem;
+    }
+    .summary-card .station-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 0.8rem;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+    }
+    .station-row .station { font-size: 1.8rem; font-weight: 700; }
+    .station-row .time { font-size: 0.85rem; color: #8ab8d0; padding-top: 0.4rem; }
+    .summary-text {
+      font-size: 1.15rem;
+      line-height: 1.5;
+      color: #d0ecff;
+      margin-bottom: 0.6rem;
+    }
+    .auto-badge {
+      display: inline-block;
+      background: rgba(255,200,0,0.2);
+      border: 1px solid rgba(255,200,0,0.4);
+      color: #ffd060;
+      font-size: 0.75rem;
+      padding: 0.15rem 0.55rem;
+      border-radius: 6px;
+      margin-left: 0.6rem;
+      vertical-align: middle;
+    }
+
+    .details-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 0.9rem;
+      margin-bottom: 1.2rem;
+    }
+    .detail-card {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 12px;
+      padding: 1rem 1.1rem;
+    }
+    .detail-card .label {
+      font-size: 0.73rem;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: #7aabb8;
+      margin-bottom: 0.35rem;
+    }
+    .detail-card .value {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #e4f4ff;
+      line-height: 1.4;
+    }
+    .detail-card .subvalue {
+      font-size: 0.8rem;
+      color: #8ab8d0;
+      margin-top: 0.15rem;
+    }
+
+    .sky-section, .weather-section {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 12px;
+      padding: 1rem 1.1rem;
+      margin-bottom: 0.9rem;
+    }
+    .section-label {
+      font-size: 0.73rem;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: #7aabb8;
+      margin-bottom: 0.5rem;
+    }
+    .sky-section ul, .weather-section ul {
+      list-style: none;
+      padding: 0;
+    }
+    .sky-section li, .weather-section li {
+      padding: 0.25rem 0;
+      font-size: 0.97rem;
+      color: #cce8f8;
+    }
+    .sky-section li::before { content: '☁ '; opacity: 0.7; }
+    .weather-section li::before { content: '⚠ '; opacity: 0.8; }
+
+    .raw-section {
+      background: rgba(0,0,0,0.25);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 10px;
+      padding: 0.85rem 1.1rem;
+    }
+    .raw-section .label { font-size: 0.73rem; text-transform: uppercase; letter-spacing: 0.8px; color: #556a7a; margin-bottom: 0.35rem; }
+    .raw-section code { font-family: 'Menlo', 'Consolas', monospace; font-size: 0.88rem; color: #78a8c0; word-break: break-all; }
+
+    .error-card {
+      background: rgba(220,50,50,0.15);
+      border: 1px solid rgba(220,50,50,0.35);
+      border-radius: 12px;
+      padding: 1.1rem 1.3rem;
+      color: #f4a0a0;
+    }
+
+    .spinner {
+      display: none;
+      text-align: center;
+      padding: 2rem;
+      color: #6aadcc;
+      font-size: 0.95rem;
+    }
+    .spinner::before {
+      content: '';
+      display: inline-block;
+      width: 22px; height: 22px;
+      border: 3px solid rgba(106,173,204,0.3);
+      border-top-color: #6aadcc;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-right: 0.7rem;
+      vertical-align: middle;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>✈ METAR Reader</h1>
+    <p>Enter an airport code to get a plain-English weather report</p>
+  </header>
+
+  <div class="search-box">
+    <input id="stationInput" type="text" maxlength="6" placeholder="Airport code (e.g. KHIO, KJFK, EGLL)" autocomplete="off" />
+    <button id="fetchBtn" onclick="fetchWeather()">Get Weather</button>
+  </div>
+  <div class="examples">
+    Try: <span onclick="setStation('KHIO')">KHIO</span>
+    <span onclick="setStation('KJFK')">KJFK</span>
+    <span onclick="setStation('KLAX')">KLAX</span>
+    <span onclick="setStation('KORD')">KORD</span>
+    <span onclick="setStation('EGLL')">EGLL</span>
+  </div>
+
+  <div class="spinner" id="spinner">Fetching weather data...</div>
+  <div id="result"></div>
+</div>
+
+<script>
+  const input = document.getElementById('stationInput');
+  const btn = document.getElementById('fetchBtn');
+  const spinner = document.getElementById('spinner');
+  const resultDiv = document.getElementById('result');
+
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') fetchWeather(); });
+
+  function setStation(code) {
+    input.value = code;
+    fetchWeather();
+  }
+
+  async function fetchWeather() {
+    const station = input.value.trim();
+    if (!station) return;
+    btn.disabled = true;
+    spinner.style.display = 'block';
+    resultDiv.style.display = 'none';
+    resultDiv.innerHTML = '';
+
+    try {
+      const resp = await fetch('/decode', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ station })
+      });
+      const data = await resp.json();
+      spinner.style.display = 'none';
+      resultDiv.style.display = 'block';
+      if (!resp.ok || data.error) {
+        resultDiv.innerHTML = `<div class="error-card">⚠ ${esc(data.error || 'Unknown error')}</div>`;
+      } else {
+        resultDiv.innerHTML = buildHTML(data);
+      }
+    } catch (err) {
+      spinner.style.display = 'none';
+      resultDiv.style.display = 'block';
+      resultDiv.innerHTML = `<div class="error-card">⚠ Network error. Please try again.</div>`;
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  function buildHTML(d) {
+    let html = '';
+
+    // Summary card
+    const autoBadge = d.auto ? '<span class="auto-badge">AUTO</span>' : '';
+    html += `<div class="summary-card">
+      <div class="station-row">
+        <div class="station">${esc(d.station || '—')}${autoBadge}</div>
+        ${d.time_utc ? `<div class="time">${esc(d.time_utc)}</div>` : ''}
+      </div>
+      <div class="summary-text">${esc(d.summary)}</div>
+    </div>`;
+
+    // Detail grid
+    const cards = [];
+
+    if (d.temp_f !== null && d.temp_f !== undefined) {
+      cards.push({ label: 'Temperature', value: `${d.temp_f}°F`, sub: `${d.temp_c}°C` });
+    }
+    if (d.dewpoint_f !== null && d.dewpoint_f !== undefined) {
+      const humidity = estimateHumidity(d.temp_c, d.dewpoint_c);
+      cards.push({ label: 'Dewpoint', value: `${d.dewpoint_f}°F`, sub: `${d.dewpoint_c}°C • ~${humidity}% relative humidity` });
+    }
+    if (d.wind) {
+      if (d.wind.calm) {
+        cards.push({ label: 'Wind', value: 'Calm', sub: '' });
+      } else {
+        cards.push({ label: 'Wind', value: d.wind.text, sub: d.wind_variable_range || '' });
+      }
+    }
+    if (d.visibility) {
+      cards.push({ label: 'Visibility', value: d.visibility, sub: '' });
+    }
+    if (d.altimeter_inhg !== null && d.altimeter_inhg !== undefined) {
+      cards.push({ label: 'Altimeter', value: `${d.altimeter_inhg} inHg`, sub: `${d.altimeter_hpa} hPa` });
+    }
+
+    if (cards.length) {
+      html += '<div class="details-grid">';
+      for (const c of cards) {
+        html += `<div class="detail-card">
+          <div class="label">${esc(c.label)}</div>
+          <div class="value">${esc(c.value)}</div>
+          ${c.sub ? `<div class="subvalue">${esc(c.sub)}</div>` : ''}
+        </div>`;
+      }
+      html += '</div>';
+    }
+
+    // Weather phenomena
+    if (d.weather && d.weather.length) {
+      html += `<div class="weather-section">
+        <div class="section-label">Weather Conditions</div>
+        <ul>${d.weather.map(w => `<li>${esc(w)}</li>`).join('')}</ul>
+      </div>`;
+    }
+
+    // Sky layers
+    if (d.sky_layers && d.sky_layers.length) {
+      html += `<div class="sky-section">
+        <div class="section-label">Sky Conditions</div>
+        <ul>${d.sky_layers.map(s => `<li>${esc(s)}</li>`).join('')}</ul>
+      </div>`;
+    }
+
+    // Raw METAR
+    html += `<div class="raw-section">
+      <div class="label">Raw METAR</div>
+      <code>${esc(d.raw)}</code>
+    </div>`;
+
+    return html;
+  }
+
+  function estimateHumidity(tc, dc) {
+    // Magnus formula approximation
+    if (tc === null || dc === null) return '?';
+    const e = 6.112 * Math.exp((17.67 * dc) / (dc + 243.5));
+    const es = 6.112 * Math.exp((17.67 * tc) / (tc + 243.5));
+    return Math.min(100, Math.round((e / es) * 100));
+  }
+
+  function esc(str) {
+    if (str === null || str === undefined) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+</script>
+</body>
+</html>
